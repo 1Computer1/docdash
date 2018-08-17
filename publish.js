@@ -321,6 +321,7 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
             var displayName;
             var methods = find({kind:'function', memberof: item.longname});
             var members = find({kind:'member', memberof: item.longname});
+            var events = find({kind:'event', memberof: item.longname});
             var docdash = env && env.conf && env.conf.docdash || {};
             var conf = env && env.conf || {};
             if ( !hasOwnProp.call(item, 'longname') ) {
@@ -358,7 +359,22 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
                         if(docdash.collapse)
                             itemsNav += " style='display: none;'";
                         itemsNav += ">";
-                        itemsNav += linkto(method.longname, method.name);
+                        itemsNav += linkto(method.longname, method.scope === 'static' ? '(static) ' + method.name : method.name);
+                        itemsNav += "</li>";
+                    });
+
+                    itemsNav += "</ul>";
+                }
+
+                if (events.length) {
+                    itemsNav += "<ul class='methods'>";
+
+                    events.forEach(function (event) {
+                        itemsNav += "<li data-type='method'";
+                        if(docdash.collapse)
+                            itemsNav += " style='display: none;'";
+                        itemsNav += ">";
+                        itemsNav += linkto(event.longname, '(event) ' + event.name);
                         itemsNav += "</li>";
                     });
 
@@ -448,7 +464,7 @@ function buildNav(members) {
             nav += '<h3>' + linkto('global', 'Global') + '</h3>';
         }
         else {
-            nav += '<h3>Global</h3><ul>' + globalNav + '</ul>';
+            nav += '<h3>Typedefs</h3><ul>' + globalNav + '</ul>';
         }
     }
 
