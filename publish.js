@@ -83,6 +83,12 @@ function needsSignature(doclet) {
             }
         }
     }
+    // and namespaces that are functions get a signature (but finding them is a		
+    // bit messy)		
+    else if (doclet.kind === 'namespace' && doclet.meta && doclet.meta.code &&		
+        doclet.meta.code.type && doclet.meta.code.type.match(/[Ff]unction/)) {		
+        needsSig = true;		
+    }
 
     return needsSig;
 }
@@ -168,12 +174,13 @@ function addSignatureReturns(f) {
     var attribsString = '';
     var returnTypes = [];
     var returnTypesString = '';
+    var source = f.yields || f.returns;
 
     // jam all the return-type attributes into an array. this could create odd results (for example,
     // if there are both nullable and non-nullable return types), but let's assume that most people
     // who use multiple @return tags aren't using Closure Compiler type annotations, and vice-versa.
-    if (f.returns) {
-        f.returns.forEach(function(item) {
+    if (source) {
+        source.forEach(function(item) {
             helper.getAttribs(item).forEach(function(attrib) {
                 if (attribs.indexOf(attrib) === -1) {
                     attribs.push(attrib);
@@ -184,8 +191,8 @@ function addSignatureReturns(f) {
         attribsString = buildAttribsString(attribs);
     }
 
-    if (f.returns) {
-        returnTypes = addNonParamAttributes(f.returns);
+    if (source) {
+        returnTypes = addNonParamAttributes(source);
     }
     if (returnTypes.length) {
         returnTypesString = util.format( ' &rarr; %s{%s}', attribsString, returnTypes.join('|') );
@@ -316,6 +323,10 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
 
     if (items && items.length) {
         var itemsNav = '';
+        var docdash = env && env.conf && env.conf.docdash || {};
+        var level = typeof docdash.navLevel === 'number' && docdash.navLevel >= 0 ?
+            docdash.navLevel :
+            Infinity;
 
         items.forEach(function(item) {
             var displayName;
@@ -324,16 +335,27 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
             var events = find({kind:'event', memberof: item.longname});
             var docdash = env && env.conf && env.conf.docdash || {};
             var conf = env && env.conf || {};
+            var classes = '';
+
+            // show private class?
+            if (docdash.private === false && item.access === 'private') return;
+
+            // depth to show?
+            if (item.ancestors && item.ancestors.length > level) {
+                classes += 'level-hide';
+            }
+
+            classes = classes ? ' class="'+ classes + '"' : '';
+            itemsNav +=  '<li'+ classes +'>';
             if ( !hasOwnProp.call(item, 'longname') ) {
-                itemsNav += '<li>' + linktoFn('', item.name);
-                itemsNav += '</li>';
+                itemsNav += linktoFn('', item.name);
             } else if ( !hasOwnProp.call(itemsSeen, item.longname) ) {
                 if (conf.templates.default.useLongnameInNav) {
                     displayName = item.longname;
                 } else {
                     displayName = item.name;
                 }
-                itemsNav += '<li>' + linktoFn(item.longname, displayName.replace(/\b(module|event):/g, ''));
+                itemsNav += linktoFn(item.longname, displayName.replace(/\b(module|event):/g, ''));
 
                 if (docdash.static && members.find(function (m) { return m.scope === 'static'; } )) {
                     itemsNav += "<ul class='members'>";
@@ -381,9 +403,9 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
                     itemsNav += "</ul>";
                 }
 
-                itemsNav += '</li>';
                 itemsSeen[item.longname] = true;
             }
+            itemsNav += '</li>';
         });
 
         if (itemsNav !== '') {
@@ -414,8 +436,7 @@ function linktoExternal(longName, name) {
  * @param {array<object>} members.tutorials
  * @param {array<object>} members.events
  * @param {array<object>} members.interfaces
- * @return {s
- ring} The HTML for the navigation sidebar.
+ * @return {string} The HTML for the navigation sidebar.
  */
 
 function buildNav(members) {
