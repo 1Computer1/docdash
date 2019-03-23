@@ -331,7 +331,6 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
         if (itemHeading === 'Tutorials') {
             function tutorial(item, d) {
                 itemsNav += '<a href="tutorial-' + item.name + '.html">' + Array.from({ length: d }, () => '—').join('') + ' ' + item.title + '</a>';
-                console.log(itemsNav);
                 if (item.children.length) {
                     item.children.forEach(function(item) { tutorial(item, d + 1); });
                 }
