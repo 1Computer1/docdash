@@ -50,7 +50,7 @@ function find(spec) {
 }
 
 function tutoriallink(tutorial) {
-    return helper.toTutorial(tutorial, null, { tag: 'em', classname: 'disabled', prefix: 'Tutorial: ' });
+    return helper.toTutorial(tutorial, null, { tag: 'em', classname: 'disabled', prefix: '' });
 }
 
 function getAncestorLinks(doclet) {
@@ -328,85 +328,97 @@ function buildMemberNav(items, itemHeading, itemsSeen, linktoFn) {
             docdash.navLevel :
             Infinity;
 
-        items.forEach(function(item) {
-            var displayName;
-            var methods = find({kind:'function', memberof: item.longname});
-            var members = find({kind:'member', memberof: item.longname});
-            var events = find({kind:'event', memberof: item.longname});
-            var docdash = env && env.conf && env.conf.docdash || {};
-            var conf = env && env.conf || {};
-            var classes = '';
-
-            // show private class?
-            if (docdash.private === false && item.access === 'private') return;
-
-            // depth to show?
-            if (item.ancestors && item.ancestors.length > level) {
-                classes += 'level-hide';
+        if (itemHeading === 'Tutorials') {
+            function tutorial(item, d) {
+                itemsNav += '<a href="tutorial-' + item.name + '.html">' + Array.from({ length: d }, () => '—').join('') + ' ' + item.title + '</a>';
+                console.log(itemsNav);
+                if (item.children.length) {
+                    item.children.forEach(function(item) { tutorial(item, d + 1); });
+                }
             }
 
-            classes = classes ? ' class="'+ classes + '"' : '';
-            itemsNav +=  '<li'+ classes +'>';
-            if ( !hasOwnProp.call(item, 'longname') ) {
-                itemsNav += linktoFn('', item.name);
-            } else if ( !hasOwnProp.call(itemsSeen, item.longname) ) {
-                if (conf.templates.default.useLongnameInNav) {
-                    displayName = item.longname;
-                } else {
-                    displayName = item.name;
-                }
-                itemsNav += linktoFn(item.longname, displayName.replace(/\b(module|event):/g, ''));
+            items.forEach(function(item) { tutorial(item, 0); });
+        } else {
+            items.forEach(function(item) {
+                var displayName;
+                var methods = find({kind:'function', memberof: item.longname});
+                var members = find({kind:'member', memberof: item.longname});
+                var events = find({kind:'event', memberof: item.longname});
+                var docdash = env && env.conf && env.conf.docdash || {};
+                var conf = env && env.conf || {};
+                var classes = '';
 
-                if (docdash.static && members.find(function (m) { return m.scope === 'static'; } )) {
-                    itemsNav += "<ul class='members'>";
+                // show private class?
+                if (docdash.private === false && item.access === 'private') return;
 
-                    members.forEach(function (member) {
-                        if (!member.scope === 'static') return;
-                        itemsNav += "<li data-type='member'";
-                        if(docdash.collapse)
-                            itemsNav += " style='display: none;'";
-                        itemsNav += ">";
-                        itemsNav += linkto(member.longname, member.name);
-                        itemsNav += "</li>";
-                    });
-
-                    itemsNav += "</ul>";
+                // depth to show?
+                if (item.ancestors && item.ancestors.length > level) {
+                    classes += 'level-hide';
                 }
 
-                if (methods.length) {
-                    itemsNav += "<ul class='methods'>";
+                classes = classes ? ' class="'+ classes + '"' : '';
+                itemsNav +=  '<li'+ classes +'>';
+                if ( !hasOwnProp.call(item, 'longname') ) {
+                    itemsNav += linktoFn('', item.name);
+                } else if ( !hasOwnProp.call(itemsSeen, item.longname) ) {
+                    if (conf.templates.default.useLongnameInNav) {
+                        displayName = item.longname;
+                    } else {
+                        displayName = item.name;
+                    }
+                    itemsNav += linktoFn(item.longname, displayName.replace(/\b(module|event):/g, ''));
 
-                    methods.forEach(function (method) {
-                        itemsNav += "<li data-type='method'";
-                        if(docdash.collapse)
-                            itemsNav += " style='display: none;'";
-                        itemsNav += ">";
-                        itemsNav += linkto(method.longname, method.scope === 'static' ? '(static) ' + method.name : method.name);
-                        itemsNav += "</li>";
-                    });
+                    if (docdash.static && members.find(function (m) { return m.scope === 'static'; } )) {
+                        itemsNav += "<ul class='members'>";
 
-                    itemsNav += "</ul>";
+                        members.forEach(function (member) {
+                            if (!member.scope === 'static') return;
+                            itemsNav += "<li data-type='member'";
+                            if(docdash.collapse)
+                                itemsNav += " style='display: none;'";
+                            itemsNav += ">";
+                            itemsNav += linkto(member.longname, member.name);
+                            itemsNav += "</li>";
+                        });
+
+                        itemsNav += "</ul>";
+                    }
+
+                    if (methods.length) {
+                        itemsNav += "<ul class='methods'>";
+
+                        methods.forEach(function (method) {
+                            itemsNav += "<li data-type='method'";
+                            if(docdash.collapse)
+                                itemsNav += " style='display: none;'";
+                            itemsNav += ">";
+                            itemsNav += linkto(method.longname, method.scope === 'static' ? '(static) ' + method.name : method.name);
+                            itemsNav += "</li>";
+                        });
+
+                        itemsNav += "</ul>";
+                    }
+
+                    if (events.length) {
+                        itemsNav += "<ul class='methods'>";
+
+                        events.forEach(function (event) {
+                            itemsNav += "<li data-type='method'";
+                            if(docdash.collapse)
+                                itemsNav += " style='display: none;'";
+                            itemsNav += ">";
+                            itemsNav += linkto(event.longname, '(event) ' + event.name);
+                            itemsNav += "</li>";
+                        });
+
+                        itemsNav += "</ul>";
+                    }
+
+                    itemsSeen[item.longname] = true;
                 }
-
-                if (events.length) {
-                    itemsNav += "<ul class='methods'>";
-
-                    events.forEach(function (event) {
-                        itemsNav += "<li data-type='method'";
-                        if(docdash.collapse)
-                            itemsNav += " style='display: none;'";
-                        itemsNav += ">";
-                        itemsNav += linkto(event.longname, '(event) ' + event.name);
-                        itemsNav += "</li>";
-                    });
-
-                    itemsNav += "</ul>";
-                }
-
-                itemsSeen[item.longname] = true;
-            }
-            itemsNav += '</li>';
-        });
+                itemsNav += '</li>';
+            });
+        }
 
         if (itemsNav !== '') {
             nav += '<h3>' + itemHeading + '</h3><ul>' + itemsNav + '</ul>';
